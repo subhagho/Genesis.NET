@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28714.193
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibGenesisCommon", "LibGenesisCommon\LibGenesisCommon.csproj", "{7216148E-9945-44C9-8647-A37EB806522C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7216148E-9945-44C9-8647-A37EB806522C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7216148E-9945-44C9-8647-A37EB806522C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7216148E-9945-44C9-8647-A37EB806522C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7216148E-9945-44C9-8647-A37EB806522C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CEDFB3F1-616C-43CD-A531-1ABE86B3408D}
+	EndGlobalSection
+EndGlobal
