@@ -76,7 +76,7 @@ namespace LibGenesisCommon.Process
         }
     }
 
-    public class Pipeline<T>
+    public class Pipeline<T> : Processor<T>
     {
         protected List<Processor<T>> processors = new List<Processor<T>>();
 
