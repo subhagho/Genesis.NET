@@ -423,4 +423,15 @@ namespace LibGenesisCommon.Common
             condition.Validate();
         }
     }
+
+    public static class ConditionParser
+    {
+        public static Condition<T> Parse<T>(string condition)
+        {
+            ConditionBuilder<T> builder = new ConditionBuilder<T>();
+
+            builder.Validate();
+            return builder.GetCondition();
+        }
+    }
 }

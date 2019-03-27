@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Linq.Dynamic.Core.CustomTypeProviders;
+using System.Diagnostics.Contracts;
 using LibZConfig.Common.Utils;
 
 namespace LibGenesisCommon.Process
@@ -79,7 +82,16 @@ namespace LibGenesisCommon.Process
     public class Pipeline<T> : Processor<T>
     {
         protected List<Processor<T>> processors = new List<Processor<T>>();
+        protected Dictionary<Processor<T>, LambdaExpression> predicates = new Dictionary<Processor<T>, LambdaExpression>();
 
+        public void Add(Processor<T> processor, string condition)
+        {
+            Contract.Requires(processor != null);
+            if (!String.IsNullOrWhiteSpace(condition))
+            {
+               
+            }
+        }
         public ProcessResponse<T> Execute(T data)
         {
             LogUtils.Debug("Running Process Pipeline:", data);
@@ -91,6 +103,22 @@ namespace LibGenesisCommon.Process
                 {
                     foreach (Processor<T> processor in processors)
                     {
+                        if (predicates.ContainsKey(processor))
+                        {
+                            LambdaExpression expression = predicates[processor];
+                            object value = expression.Compile().DynamicInvoke(data);
+                            if (value != null)
+                            {
+                                if (value.GetType() == typeof(Boolean))
+                                {
+                                    bool ret = (bool)value;
+                                    if (!ret)
+                                    {
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
                         response = processor.Execute(data);
                         if (response.State == EProcessResponse.FatalError)
                         {
