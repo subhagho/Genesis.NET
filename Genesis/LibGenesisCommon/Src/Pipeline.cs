@@ -166,7 +166,7 @@ namespace LibGenesisCommon.Process
                 catch (Exception e)
                 {
                     LogUtils.Error(e);
-                    response.SetError(e);
+                    response.SetError(EProcessResponse.FatalError, e);
                     if (e.GetType() == typeof(ProcessUnhandledException))
                     {
                         response.State = EProcessResponse.UnhandledError;
@@ -208,7 +208,7 @@ namespace LibGenesisCommon.Process
                         {
                             throw new ProcessException("Null response returned.");
                         }
-                        if (response.Data == null)
+                        if (response.Data == null || response.Data.Count <= 0)
                         {
                             response.State = EProcessResponse.NullData;
                             break;
@@ -259,7 +259,7 @@ namespace LibGenesisCommon.Process
                 catch (Exception e)
                 {
                     LogUtils.Error(e);
-                    response.SetError(e);
+                    response.SetError(EProcessResponse.FatalError, e);
                     if (e.GetType() == typeof(ProcessUnhandledException))
                     {
                         response.State = EProcessResponse.UnhandledError;

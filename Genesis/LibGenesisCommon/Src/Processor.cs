@@ -68,18 +68,19 @@ namespace LibGenesisCommon.Process
         }
 
         /// <summary>
-        /// Get the error state for this type.
+        /// Get the error state(s) for this type.
         /// </summary>
         /// <returns></returns>
-        public override EProcessResponse GetErrorState()
+        public override EProcessResponse[] GetErrorStates()
         {
-            return EProcessResponse.FatalError;
+            return new EProcessResponse[] { EProcessResponse.FatalError, EProcessResponse.StopWithError, EProcessResponse.UnhandledError, EProcessResponse.ContinueWithError };
         }
     }
 
-    public interface Processor<T>
+    public abstract class Processor<T>
     {
-        ProcessResponse<T> Execute(T data);
+        public string Name { get; set; }
+        public abstract ProcessResponse<T> Execute(T data);
     }
 
     /// <summary>
@@ -99,7 +100,7 @@ namespace LibGenesisCommon.Process
             return true;
         }
 
-        public virtual ProcessResponse<T> Execute(T data)
+        public override ProcessResponse<T> Execute(T data)
         {
             if (data != null)
             {
@@ -139,7 +140,7 @@ namespace LibGenesisCommon.Process
             return true;
         }
 
-        public ProcessResponse<List<T>> Execute(List<T> data)
+        public override ProcessResponse<List<T>> Execute(List<T> data)
         {
             if (data != null && data.Count > 0)
             {
@@ -163,7 +164,7 @@ namespace LibGenesisCommon.Process
                     {
                         throw new ProcessException("Null response returned.");
                     }
-                    if (response.Data == null)
+                    if (response.Data == null || response.Data.Count <= 0)
                     {
                         if (FilterResult)
                         {
@@ -188,7 +189,7 @@ namespace LibGenesisCommon.Process
                         {
                             if (excluded.Count > 0)
                             {
-                                foreach(T value in excluded)
+                                foreach (T value in excluded)
                                 {
                                     response.Data.Add(value);
                                 }
