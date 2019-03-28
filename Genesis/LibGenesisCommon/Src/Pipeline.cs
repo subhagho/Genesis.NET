@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Linq.Dynamic.Core.CustomTypeProviders;
 using System.Diagnostics.Contracts;
 using LibZConfig.Common.Utils;
 
@@ -79,20 +77,29 @@ namespace LibGenesisCommon.Process
         }
     }
 
-    public class Pipeline<T> : Processor<T>
+    public interface Pipeline<T>
+    {
+        List<Processor<T>> GetProcessors();
+
+        void Add(Processor<T> processor);
+    }
+
+    public class BasicPipeline<T> : BasicProcessor<T>, Pipeline<T>
     {
         protected List<Processor<T>> processors = new List<Processor<T>>();
-        protected Dictionary<Processor<T>, LambdaExpression> predicates = new Dictionary<Processor<T>, LambdaExpression>();
 
-        public void Add(Processor<T> processor, string condition)
+        public void Add(Processor<T> processor)
         {
             Contract.Requires(processor != null);
-            if (!String.IsNullOrWhiteSpace(condition))
-            {
-               
-            }
+            processors.Add(processor);
         }
-        public ProcessResponse<T> Execute(T data)
+
+        public List<Processor<T>> GetProcessors()
+        {
+            return processors;
+        }
+
+        protected override ProcessResponse<T> ExecuteProcess(T data)
         {
             LogUtils.Debug("Running Process Pipeline:", data);
             ProcessResponse<T> response = new ProcessResponse<T>();
@@ -103,23 +110,109 @@ namespace LibGenesisCommon.Process
                 {
                     foreach (Processor<T> processor in processors)
                     {
-                        if (predicates.ContainsKey(processor))
+                        response = processor.Execute(response.Data);
+                        if (response == null)
                         {
-                            LambdaExpression expression = predicates[processor];
-                            object value = expression.Compile().DynamicInvoke(data);
-                            if (value != null)
+                            throw new ProcessException("Null response returned.");
+                        }
+                        if (response.Data == null)
+                        {
+                            response.State = EProcessResponse.NullData;
+                            break;
+                        }
+                        if (response.State == EProcessResponse.FatalError)
+                        {
+                            Exception ex = response.GetError();
+                            if (ex == null)
                             {
-                                if (value.GetType() == typeof(Boolean))
-                                {
-                                    bool ret = (bool)value;
-                                    if (!ret)
-                                    {
-                                        continue;
-                                    }
-                                }
+                                ex = new ProcessException("Processor raised error.");
+                            }
+                            throw new ProcessException(ex);
+                        }
+                        else if (response.State == EProcessResponse.ContinueWithError)
+                        {
+                            Exception ex = response.GetError();
+                            if (ex != null)
+                            {
+                                LogUtils.Error(String.Format("Continuing with error: [type={0}]", processor.GetType().FullName));
+                                LogUtils.Error(ex);
+                            }
+                            else
+                            {
+                                LogUtils.Error(String.Format("Continuing with error: [type={0}]", processor.GetType().FullName));
                             }
                         }
-                        response = processor.Execute(data);
+                        else if (response.State == EProcessResponse.StopWithOk)
+                        {
+                            LogUtils.Warn(String.Format("Terminating further processing: [type={0}][reponse={1}]", processor.GetType().FullName, response.State.ToString()));
+                            break;
+                        }
+                        else if (response.State == EProcessResponse.StopWithError)
+                        {
+                            Exception ex = response.GetError();
+                            if (ex != null)
+                            {
+                                LogUtils.Error(String.Format("Stopping with error: [type={0}]", processor.GetType().FullName));
+                                LogUtils.Error(ex);
+                            }
+                            else
+                            {
+                                LogUtils.Error(String.Format("Stopping with error: [type={0}]", processor.GetType().FullName));
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    LogUtils.Error(e);
+                    response.SetError(e);
+                    if (e.GetType() == typeof(ProcessUnhandledException))
+                    {
+                        response.State = EProcessResponse.UnhandledError;
+                    }
+                }
+            }
+            return response;
+        }
+    }
+
+    public class CollectionPipeline<T> : CollectionProcessor<T>, Pipeline<List<T>>
+    {
+        protected List<Processor<List<T>>> processors = new List<Processor<List<T>>>();
+
+        public void Add(Processor<List<T>> processor)
+        {
+            Contract.Requires(processor != null);
+            processors.Add(processor);
+        }
+
+        public List<Processor<List<T>>> GetProcessors()
+        {
+            return processors;
+        }
+
+        protected override ProcessResponse<List<T>> ExecuteProcess(List<T> data)
+        {
+            LogUtils.Debug("Running Process Pipeline:", data);
+            ProcessResponse<List<T>> response = new ProcessResponse<List<T>>();
+            response.Data = data;
+            if (processors.Count > 0)
+            {
+                try
+                {
+                    foreach (Processor<List<T>> processor in processors)
+                    {
+                        response = processor.Execute(response.Data);
+                        if (response == null)
+                        {
+                            throw new ProcessException("Null response returned.");
+                        }
+                        if (response.Data == null)
+                        {
+                            response.State = EProcessResponse.NullData;
+                            break;
+                        }
                         if (response.State == EProcessResponse.FatalError)
                         {
                             Exception ex = response.GetError();

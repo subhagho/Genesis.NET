@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using LibZConfig.Common;
+using LibGenesisCommon.Common;
 
 namespace LibGenesisCommon.Process
 {
@@ -35,7 +37,15 @@ namespace LibGenesisCommon.Process
         /// <summary>
         /// Step raised error, stop further processing.
         /// </summary>
-        StopWithError
+        StopWithError,
+        /// <summary>
+        /// Step was not executed (due to condition constraint)
+        /// </summary>
+        NotExecuted,
+        /// <summary>
+        /// Processing resulted in NULL data response.
+        /// </summary>
+        NullData
     }
 
     /// <summary>
@@ -67,17 +77,152 @@ namespace LibGenesisCommon.Process
         }
     }
 
+    public interface Processor<T>
+    {
+        ProcessResponse<T> Execute(T data);
+    }
+
     /// <summary>
     /// Interface to be implmenented by processors.
     /// </summary>
     /// <typeparam name="T">Entity type this processor handles.</typeparam>
-    public interface Processor<T>
+    public abstract class BasicProcessor<T> : Processor<T>
     {
+        public Func<T, bool> Condition { get; set; }
+
+        public virtual bool MatchCondition(T data)
+        {
+            if (Condition != null)
+            {
+                return Condition.Invoke(data);
+            }
+            return true;
+        }
+
+        public virtual ProcessResponse<T> Execute(T data)
+        {
+            if (data != null)
+            {
+                if (!MatchCondition(data))
+                {
+                    ProcessResponse<T> response = new ProcessResponse<T>();
+                    response.State = EProcessResponse.NotExecuted;
+                    response.Data = data;
+                }
+                else
+                {
+                    return ExecuteProcess(data);
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         /// Execute the processor on the specified entity data.
         /// </summary>
         /// <param name="data">Entity data input</param>
         /// <returns>Response</returns>
-        ProcessResponse<T> Execute(T data);
+        protected abstract ProcessResponse<T> ExecuteProcess(T data);
+    }
+
+    public abstract class CollectionProcessor<T> : Processor<List<T>>
+    {
+        public bool FilterResult { get; set; }
+        public Func<T, bool> Condition { get; set; }
+
+        public virtual bool MatchCondition(T data)
+        {
+            if (Condition != null)
+            {
+                return Condition.Invoke(data);
+            }
+            return true;
+        }
+
+        public ProcessResponse<List<T>> Execute(List<T> data)
+        {
+            if (data != null && data.Count > 0)
+            {
+                List<T> included = new List<T>();
+                List<T> excluded = new List<T>();
+                foreach (T value in data)
+                {
+                    if (MatchCondition(value))
+                    {
+                        included.Add(value);
+                    }
+                    else
+                    {
+                        excluded.Add(value);
+                    }
+                }
+                if (included.Count > 0)
+                {
+                    ProcessResponse<List<T>> response = ExecuteProcess(data);
+                    if (response == null)
+                    {
+                        throw new ProcessException("Null response returned.");
+                    }
+                    if (response.Data == null)
+                    {
+                        if (FilterResult)
+                        {
+                            response.Data = null;
+                            response.State = EProcessResponse.NullData;
+                            return response;
+                        }
+                        else
+                        {
+                            response.Data = excluded;
+                            response.State = EProcessResponse.NullData;
+                            return response;
+                        }
+                    }
+                    else
+                    {
+                        if (FilterResult)
+                        {
+                            return response;
+                        }
+                        else
+                        {
+                            if (excluded.Count > 0)
+                            {
+                                foreach(T value in excluded)
+                                {
+                                    response.Data.Add(value);
+                                }
+                            }
+                            return response;
+                        }
+                    }
+                }
+                else
+                {
+                    ProcessResponse<List<T>> response = new ProcessResponse<List<T>>();
+                    if (FilterResult)
+                    {
+                        response.Data = null;
+                        response.State = EProcessResponse.NullData;
+                        return response;
+                    }
+                    else
+                    {
+                        response.Data = excluded;
+                        response.State = EProcessResponse.NullData;
+                        return response;
+                    }
+                }
+
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Execute the processor on the specified entity data.
+        /// </summary>
+        /// <param name="data">Entity data input</param>
+        /// <returns>Response</returns>
+        protected abstract ProcessResponse<List<T>> ExecuteProcess(List<T> data);
     }
 }
