@@ -1,7 +1,33 @@
-﻿using System;
+﻿#region copyright
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Copyright (c) 2019
+// Date: 2019-3-28
+// Project: LibGenesisCommon
+// Subho Ghosh (subho dot ghosh at outlook.com)
+//
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using LibZConfig.Common;
-using LibGenesisCommon.Common;
+using LibZConfig.Common.Config.Attributes;
 
 namespace LibGenesisCommon.Process
 {
@@ -77,34 +103,66 @@ namespace LibGenesisCommon.Process
         }
     }
 
+    /// <summary>
+    /// Base class for defining Data processors
+    /// </summary>
+    /// <typeparam name="T">Data Type</typeparam>
     public abstract class Processor<T>
     {
+        /// <summary>
+        /// Name of the processor (must be unique in the defined scope)
+        /// </summary>
         public string Name { get; set; }
-        public abstract ProcessResponse<T> Execute(T data);
+        /// <summary>
+        /// Abstract method to execute the processor on the data element.
+        /// </summary>
+        /// <param name="data">Data element</param>
+        /// <param name="condition">Condition clause to check prior to processing</param>
+        /// <returns>Process response</returns>
+        public abstract ProcessResponse<T> Execute(T data, object condition);
     }
 
     /// <summary>
-    /// Interface to be implmenented by processors.
+    /// Abstract base class to be implmenented by processors processing on single entities.
     /// </summary>
     /// <typeparam name="T">Entity type this processor handles.</typeparam>
     public abstract class BasicProcessor<T> : Processor<T>
     {
-        public Func<T, bool> Condition { get; set; }
-
-        public virtual bool MatchCondition(T data)
+        /// <summary>
+        /// Check if this processor should execute based on the passed condition.
+        /// </summary>
+        /// <param name="data">Data element</param>
+        /// <param name="condition">Condition (Func<T, bool>)</param>
+        /// <returns>Should execute?</returns>
+        public virtual bool MatchCondition(T data, object condition)
         {
-            if (Condition != null)
+            if (condition != null)
             {
-                return Condition.Invoke(data);
+                if (typeof(MulticastDelegate).IsAssignableFrom(condition.GetType().BaseType))
+                {
+                    Func<T, bool> func = (Func<T, bool>)condition;
+                    return func.Invoke(data);
+                }
+                else
+                {
+                    throw new ProcessException(String.Format("Invalid Condition: [type={0}]", condition.GetType().FullName));
+                }
             }
+
             return true;
         }
 
-        public override ProcessResponse<T> Execute(T data)
+        /// <summary>
+        /// Method to execute the processor on the data element.
+        /// </summary>
+        /// <param name="data">Data element</param>
+        /// <param name="condition">Condition clause to check prior to processing</param>
+        /// <returns>Process response</returns>
+        public override ProcessResponse<T> Execute(T data, object condition)
         {
             if (data != null)
             {
-                if (!MatchCondition(data))
+                if (!MatchCondition(data, condition))
                 {
                     ProcessResponse<T> response = new ProcessResponse<T>();
                     response.State = EProcessResponse.NotExecuted;
@@ -128,19 +186,44 @@ namespace LibGenesisCommon.Process
 
     public abstract class CollectionProcessor<T> : Processor<List<T>>
     {
-        public bool FilterResult { get; set; }
-        public Func<T, bool> Condition { get; set; }
+        /// <summary>
+        /// Property specifying if the processor should exclude all values that don't 
+        /// match the passed condition from the result set.
+        /// </summary>
+        [ConfigAttribute(Name = "filterResults")]
+        public bool FilterResults { get; set; }
 
-        public virtual bool MatchCondition(T data)
+        /// <summary>
+        /// Check if this processor should execute based on the passed condition.
+        /// </summary>
+        /// <param name="data">Data element</param>
+        /// <param name="condition">Condition (Func<T, bool>)</param>
+        /// <returns>Should execute?</returns>
+        public virtual bool MatchCondition(T data, object condition)
         {
-            if (Condition != null)
+            if (condition != null)
             {
-                return Condition.Invoke(data);
+                if (typeof(MulticastDelegate).IsAssignableFrom(condition.GetType().BaseType))
+                {
+                    Func<T, bool> func = (Func<T, bool>)condition;
+                    return func.Invoke(data);
+                }
+                else
+                {
+                    throw new ProcessException(String.Format("Invalid Condition: [type={0}]", condition.GetType().FullName));
+                }
             }
+            
             return true;
         }
 
-        public override ProcessResponse<List<T>> Execute(List<T> data)
+        /// <summary>
+        /// Method to execute the processor on the data element.
+        /// </summary>
+        /// <param name="data">Data element</param>
+        /// <param name="condition">Condition clause to check prior to processing</param>
+        /// <returns>Process response</returns>
+        public override ProcessResponse<List<T>> Execute(List<T> data, object condition)
         {
             if (data != null && data.Count > 0)
             {
@@ -148,7 +231,7 @@ namespace LibGenesisCommon.Process
                 List<T> excluded = new List<T>();
                 foreach (T value in data)
                 {
-                    if (MatchCondition(value))
+                    if (MatchCondition(value, condition))
                     {
                         included.Add(value);
                     }
@@ -166,7 +249,7 @@ namespace LibGenesisCommon.Process
                     }
                     if (response.Data == null || response.Data.Count <= 0)
                     {
-                        if (FilterResult)
+                        if (FilterResults)
                         {
                             response.Data = null;
                             response.State = EProcessResponse.NullData;
@@ -181,7 +264,7 @@ namespace LibGenesisCommon.Process
                     }
                     else
                     {
-                        if (FilterResult)
+                        if (FilterResults)
                         {
                             return response;
                         }
@@ -201,7 +284,7 @@ namespace LibGenesisCommon.Process
                 else
                 {
                     ProcessResponse<List<T>> response = new ProcessResponse<List<T>>();
-                    if (FilterResult)
+                    if (FilterResults)
                     {
                         response.Data = null;
                         response.State = EProcessResponse.NullData;

@@ -1,4 +1,30 @@
-﻿using System;
+﻿#region copyright
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Copyright (c) 2019
+// Date: 2019-3-28
+// Project: LibGenesisCommon
+// Subho Ghosh (subho dot ghosh at outlook.com)
+//
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Reflection;
@@ -9,8 +35,8 @@ using LibZConfig.Common.Config.Nodes;
 
 namespace LibGenesisCommon.Process
 {
-    [ConfigPath()]
-    public class PipelineDef
+    [ConfigPath(Path = "pipeline")]
+    public class PipelineConfig
     {
         [ConfigAttribute(Name = "name", Required = true)]
         public string Name { get; set; }
@@ -20,8 +46,8 @@ namespace LibGenesisCommon.Process
         public string Assembly { get; set; }
     }
 
-    [ConfigPath()]
-    public class ProcessDef
+    [ConfigPath(Path = "processor")]
+    public class ProcessConfig
     {
         [ConfigAttribute(Name = "name", Required = true)]
         public string Name { get; set; }
@@ -29,8 +55,12 @@ namespace LibGenesisCommon.Process
         public string Type { get; set; }
         [ConfigAttribute(Name = "assembly", Required = false)]
         public string Assembly { get; set; }
-        [ConfigValue(Name = "condition", Required = false)]
+        [ConfigAttribute(Name = "reference", Required = false)]
+        public bool IsReference { get; set; }
+        [ConfigAttribute(Path ="condition", Name = "clause", Required = false)]
         public string Condition { get; set; }
+        [ConfigAttribute(Path = "condition", Name = "typeName", Required = false)]
+        public string TypeName { get; set; }
     }
 
     public class PipelineBuilder
@@ -39,7 +69,9 @@ namespace LibGenesisCommon.Process
         public const string CONFIG_NODE_PIPELINE = "pipeline";
         public const string CONFIG_NODE_PROCESSORS = "processors";
         public const string CONFIG_NODE_PROCESSOR = "processor";
-
+        public const string PROPPERTY_NAME = "Name";
+        public const string METHOD_ADD = "Add";
+        
         private Dictionary<string, object> pipelines = new Dictionary<string, object>();
 
         public Pipeline<T> GetPipeline<T>(string name)
@@ -62,7 +94,7 @@ namespace LibGenesisCommon.Process
         {
             Contract.Requires(config != null);
             AbstractConfigNode ps = null;
-            if (config.Name != CONFIG_NODE_PIPELINES)
+            if (config.Name == CONFIG_NODE_PIPELINES)
             {
                 ps = config;
             }
@@ -98,7 +130,7 @@ namespace LibGenesisCommon.Process
                 LogUtils.Warn(String.Format("Invalid Pipeline Node: [path={0}]", node.GetSearchPath()));
                 return;
             }
-            PipelineDef def = ConfigurationAnnotationProcessor.Process<PipelineDef>(node);
+            PipelineConfig def = ConfigurationAnnotationProcessor.Process<PipelineConfig>(node);
             if (def == null)
             {
                 throw new ProcessException(String.Format("Error reading pipeline definition. [path={0}]", node.GetAbsolutePath()));
@@ -118,10 +150,10 @@ namespace LibGenesisCommon.Process
             {
                 throw new ProcessException(String.Format("Invalid pipeline type. [type={0}]", type.FullName));
             }
-            PropertyInfo pi = TypeUtils.FindProperty(type, "Name");
+            PropertyInfo pi = TypeUtils.FindProperty(type, PROPPERTY_NAME);
             if (pi == null)
             {
-                throw new ProcessException(String.Format("Property not found: 'Name' [type={0}]", type.FullName));
+                throw new ProcessException(String.Format("Property not found: [property={0}][type={1}]", PROPPERTY_NAME, type.FullName));
             }
             pi.SetValue(obj, def.Name);
 
@@ -148,7 +180,7 @@ namespace LibGenesisCommon.Process
             else if (pnode.GetType() == typeof(ConfigElementListNode))
             {
                 ConfigElementListNode nodes = (ConfigElementListNode)pnode;
-                foreach(ConfigElementNode elem in nodes.GetValues())
+                foreach (ConfigElementNode elem in nodes.GetValues())
                 {
                     if (elem.GetType() == typeof(ConfigPathNode) && elem.Name == CONFIG_NODE_PROCESSOR)
                     {
@@ -160,13 +192,13 @@ namespace LibGenesisCommon.Process
 
         private void LoadProcessor(object pipeline, ConfigPathNode node, string pname)
         {
-            LogUtils.Debug(String.Format("Loading processor from node. [node={0}]", node.GetAbsolutePath()));
+            LogUtils.Debug(String.Format("Loading processor from node. [pipeline={0}][node={1}]", pname, node.GetAbsolutePath()));
             if (node.Name != CONFIG_NODE_PROCESSOR)
             {
                 LogUtils.Warn(String.Format("Invalid Processor Node: [path={0}]", node.GetSearchPath()));
                 return;
             }
-            ProcessDef def = ConfigurationAnnotationProcessor.Process<ProcessDef>(node);
+            ProcessConfig def = ConfigurationAnnotationProcessor.Process<ProcessConfig>(node);
             if (def == null)
             {
                 throw new ProcessException(String.Format("Error reading pipeline definition. [path={0}]", node.GetAbsolutePath()));
@@ -177,21 +209,50 @@ namespace LibGenesisCommon.Process
                 typename = String.Format("{0}, {1}", def.Type, def.Assembly);
             }
             Type type = Type.GetType(typename);
-            object obj = ConfigurationAnnotationProcessor.CreateInstance(type, node);
-            if (obj == null)
+            object obj = null;
+            if (def.IsReference)
             {
-                throw new ProcessException(String.Format("Error creating processor instance. [type={0}]", type.FullName));
+                if (ReflectionUtils.ImplementsGenericInterface(type, typeof(Pipeline<>)))
+                {
+                    if (pipelines.ContainsKey(def.Name))
+                    {
+                        obj = pipelines[def.Name];
+                    }
+                    else
+                    {
+                        throw new ProcessException(String.Format("Referenced Pipeline not found: [name={0}][type={1}]", def.Name, type.FullName));
+                    }
+                }
             }
-            if (!ReflectionUtils.IsSubclassOfRawGeneric(obj.GetType(), typeof(Processor<>)))
+            else
             {
-                throw new ProcessException(String.Format("Invalid processor type. [type={0}]", type.FullName));
+                obj = ConfigurationAnnotationProcessor.CreateInstance(type, node);
+                if (obj == null)
+                {
+                    throw new ProcessException(String.Format("Error creating processor instance. [type={0}]", type.FullName));
+                }
+                if (!ReflectionUtils.IsSubclassOfRawGeneric(obj.GetType(), typeof(Processor<>)))
+                {
+                    throw new ProcessException(String.Format("Invalid processor type. [type={0}]", type.FullName));
+                }
+                PropertyInfo pi = TypeUtils.FindProperty(type, "Name");
+                if (pi == null)
+                {
+                    throw new ProcessException(String.Format("Property not found: [property={0}][type={1}]", PROPPERTY_NAME, type.FullName));
+                }
+                pi.SetValue(obj, def.Name);
             }
-            PropertyInfo pi = TypeUtils.FindProperty(type, "Name");
-            if (pi == null)
+            AddProcessor(pipeline, obj, def.Condition, def.TypeName);
+        }
+
+        private void AddProcessor(object pipeline, object processor, string condition, string prefix)
+        {
+            MethodInfo mi = pipeline.GetType().GetMethod(METHOD_ADD);
+            if (mi == null)
             {
-                throw new ProcessException(String.Format("Property not found: 'Name' [type={0}]", type.FullName));
+                throw new ProcessException(String.Format("Method not found: [method={0}][type={1}]", METHOD_ADD, pipeline.GetType().FullName));
             }
-            pi.SetValue(obj, def.Name);
+            mi.Invoke(pipeline, new[] { processor, condition, prefix });
         }
     }
 }

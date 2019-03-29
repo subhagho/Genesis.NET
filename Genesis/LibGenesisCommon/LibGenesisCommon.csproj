@@ -10,7 +10,7 @@
     <PackageReference Include="NLog" Version="4.6.0" />
     <PackageReference Include="NLog.Config" Version="4.6.0" />
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.0.12" />
-    <PackageReference Include="Wookler.ZConfig.Common" Version="0.1.5-alpha" />
+    <PackageReference Include="Wookler.ZConfig.Common" Version="0.1.6.1" />
   </ItemGroup>
 
 </Project>

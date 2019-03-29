@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+  <header ID="UNIQUE-99918239013" group="TEST-APP-GROUP" application="TEST-APPLICATION" name="test-pipelines" version="0.2">
+    <description>This is a test Pipeline configuration file.</description>
+    <createdBy user="subho" timestamp="1552835141000" />
+    <updatedBy user="subho" timestamp="1552835151000" />
+  </header>
+  <pipelines>
+    <pipeline name="UserDataPipeline" type="LibGenesisCommon.Tests.UserDataPipeline">
+      <processors>
+        <processor name="CheckNameProcessor" type="LibGenesisCommon.Tests.CheckNameProcessor" />
+        <processor name="DefaultEmailProcessor" type="LibGenesisCommon.Tests.DefaultEmailProcessor" />
+        <processor name="DefaultEmailProcessor" type="LibGenesisCommon.Tests.DefaultEmailProcessor">
+          <condition clause="user.DateOfBirth != null" typeName="user"/>
+        </processor>
+      </processors>
+    </pipeline>
+  </pipelines>
+</configuration>

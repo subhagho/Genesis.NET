@@ -1,7 +1,34 @@
-﻿using System;
+﻿#region copyright
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Copyright (c) 2019
+// Date: 2019-3-28
+// Project: LibGenesisCommon
+// Subho Ghosh (subho dot ghosh at outlook.com)
+//
+//
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using LibZConfig.Common.Utils;
+using LibGenesisCommon.Common;
 
 namespace LibGenesisCommon.Process
 {
@@ -81,17 +108,26 @@ namespace LibGenesisCommon.Process
     {
         List<Processor<T>> GetProcessors();
 
-        void Add(Processor<T> processor);
+        void Add(Processor<T> processor, string condition, string prefix);
     }
 
     public class BasicPipeline<T> : BasicProcessor<T>, Pipeline<T>
     {
         protected List<Processor<T>> processors = new List<Processor<T>>();
+        protected Dictionary<string, Func<T, bool>> conditions = new Dictionary<string, Func<T, bool>>();
 
-        public void Add(Processor<T> processor)
+        public void Add(Processor<T> processor, string condition, string prefix)
         {
             Contract.Requires(processor != null);
             processors.Add(processor);
+            if (!String.IsNullOrWhiteSpace(condition))
+            {
+                Func<T, bool> func = ConditionParser.Parse<T>(condition, prefix);
+                if (func != null)
+                {
+                    conditions[processor.Name] = func;
+                }
+            }
         }
 
         public List<Processor<T>> GetProcessors()
@@ -110,7 +146,12 @@ namespace LibGenesisCommon.Process
                 {
                     foreach (Processor<T> processor in processors)
                     {
-                        response = processor.Execute(response.Data);
+                        Func<T, bool> func = null;
+                        if (conditions.ContainsKey(processor.Name))
+                        {
+                            func = conditions[processor.Name];
+                        }
+                        response = processor.Execute(response.Data, func);
                         if (response == null)
                         {
                             throw new ProcessException("Null response returned.");
@@ -180,11 +221,20 @@ namespace LibGenesisCommon.Process
     public class CollectionPipeline<T> : CollectionProcessor<T>, Pipeline<List<T>>
     {
         protected List<Processor<List<T>>> processors = new List<Processor<List<T>>>();
+        protected Dictionary<string, Func<T, bool>> conditions = new Dictionary<string, Func<T, bool>>();
 
-        public void Add(Processor<List<T>> processor)
+        public void Add(Processor<List<T>> processor, string condition, string prefix)
         {
             Contract.Requires(processor != null);
             processors.Add(processor);
+            if (!String.IsNullOrWhiteSpace(condition))
+            {
+                Func<T, bool> func = ConditionParser.Parse<T>(condition, prefix);
+                if (func != null)
+                {
+                    conditions[processor.Name] = func;
+                }
+            }
         }
 
         public List<Processor<List<T>>> GetProcessors()
@@ -203,7 +253,12 @@ namespace LibGenesisCommon.Process
                 {
                     foreach (Processor<List<T>> processor in processors)
                     {
-                        response = processor.Execute(response.Data);
+                        Func<T, bool> func = null;
+                        if (conditions.ContainsKey(processor.Name))
+                        {
+                            func = conditions[processor.Name];
+                        }
+                        response = processor.Execute(response.Data, func);
                         if (response == null)
                         {
                             throw new ProcessException("Null response returned.");
