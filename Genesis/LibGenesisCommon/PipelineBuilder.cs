@@ -106,7 +106,15 @@ namespace LibGenesisCommon.Process
             {
                 if (ps.GetType() == typeof(ConfigPathNode))
                 {
-                    LoadPipeline((ConfigPathNode)ps);
+                    ps = ps.Find(CONFIG_NODE_PIPELINE);
+                    if (ps != null && ps.GetType() == typeof(ConfigPathNode))
+                    {
+                        LoadPipeline((ConfigPathNode)ps);
+                    }
+                    else
+                    {
+                        LogUtils.Warn(String.Format("No pipeline defined: [path={0}]", config.GetAbsolutePath()));
+                    }
                 }
                 else if (ps.GetType() == typeof(ConfigElementListNode))
                 {
