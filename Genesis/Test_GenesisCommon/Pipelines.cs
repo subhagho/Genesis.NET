@@ -25,7 +25,7 @@ namespace LibGenesisCommon.Tests
 
     public class DefaultEmailProcessor : BasicProcessor<User>
     {
-        [ConfigValue(Name = "domain", Required = true)]
+        [ConfigValue(Name = "domain", Required = false)]
         public string Domain { get; set; }
 
         protected override ProcessResponse<User> ExecuteProcess(User data)

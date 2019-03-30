@@ -27,6 +27,7 @@
 using System;
 using System.Collections.Generic;
 using LibZConfig.Common;
+using LibZConfig.Common.Utils;
 using LibZConfig.Common.Config.Attributes;
 
 namespace LibGenesisCommon.Process
@@ -243,10 +244,7 @@ namespace LibGenesisCommon.Process
                 if (included.Count > 0)
                 {
                     ProcessResponse<List<T>> response = ExecuteProcess(data);
-                    if (response == null)
-                    {
-                        throw new ProcessException("Null response returned.");
-                    }
+                    Conditions.NotNull(response);
                     if (response.Data == null || response.Data.Count <= 0)
                     {
                         if (FilterResults)

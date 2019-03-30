@@ -152,10 +152,7 @@ namespace LibGenesisCommon.Process
                             func = conditions[processor.Name];
                         }
                         response = processor.Execute(response.Data, func);
-                        if (response == null)
-                        {
-                            throw new ProcessException("Null response returned.");
-                        }
+                        Conditions.NotNull(response);
                         if (response.Data == null)
                         {
                             response.State = EProcessResponse.NullData;
@@ -259,10 +256,7 @@ namespace LibGenesisCommon.Process
                             func = conditions[processor.Name];
                         }
                         response = processor.Execute(response.Data, func);
-                        if (response == null)
-                        {
-                            throw new ProcessException("Null response returned.");
-                        }
+                        Conditions.NotNull(response);
                         if (response.Data == null || response.Data.Count <= 0)
                         {
                             response.State = EProcessResponse.NullData;
