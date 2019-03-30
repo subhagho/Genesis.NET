@@ -1,0 +1,11 @@
+language: csharp
+solution: Genesis.sln
+mono: none
+dotnet: 2.1
+before_install:
+        - cd Genesis
+install:
+        - dotnet restore
+script:
+        - dotnet build 
+        - dotnet test Test_GenesisCommon/Test_GenesisCommon.csproj
