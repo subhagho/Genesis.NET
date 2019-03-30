@@ -104,18 +104,52 @@ namespace LibGenesisCommon.Process
         }
     }
 
+    /// <summary>
+    /// Interface to be implemented for defining Data Pipelines.
+    /// 
+    /// Note: Interface should not be implemented outside of the core package.
+    /// Derived classes should be used.
+    /// </summary>
+    /// <typeparam name="T">Data Type</typeparam>
     public interface Pipeline<T>
     {
+        /// <summary>
+        /// Get all the defined processors for this pipeline.
+        /// </summary>
+        /// <returns>List of Processors</returns>
         List<Processor<T>> GetProcessors();
 
+        /// <summary>
+        /// Add a new processor to this pipeline.
+        /// 
+        /// If a condition is specified, the passed data will be evaluated against it
+        /// to decide if the processor should operate on the data.
+        /// </summary>
+        /// <param name="processor">Processor handle.</param>
+        /// <param name="condition">Condition string (Linq Clause)</param>
+        /// <param name="prefix">Data Prefix used in the condition string. (Required)</param>
         void Add(Processor<T> processor, string condition, string prefix);
     }
 
+    /// <summary>
+    /// Base Pipeline class:
+    /// Defines a pipeline to operate on the specified data type.
+    /// </summary>
+    /// <typeparam name="T">Data Type</typeparam>
     public class BasicPipeline<T> : BasicProcessor<T>, Pipeline<T>
     {
         protected List<Processor<T>> processors = new List<Processor<T>>();
         protected Dictionary<string, Func<T, bool>> conditions = new Dictionary<string, Func<T, bool>>();
 
+        /// <summary>
+        /// Add a new processor to this pipeline.
+        /// 
+        /// If a condition is specified, the passed data will be evaluated against it
+        /// to decide if the processor should operate on the data.
+        /// </summary>
+        /// <param name="processor">Processor handle.</param>
+        /// <param name="condition">Condition string (Linq Clause)</param>
+        /// <param name="prefix">Data Prefix used in the condition string. (Required)</param>
         public void Add(Processor<T> processor, string condition, string prefix)
         {
             Contract.Requires(processor != null);
@@ -130,11 +164,22 @@ namespace LibGenesisCommon.Process
             }
         }
 
+        /// <summary>
+        /// Get all the defined processors for this pipeline.
+        /// </summary>
+        /// <returns>List of Processors</returns>
         public List<Processor<T>> GetProcessors()
         {
             return processors;
         }
 
+        /// <summary>
+        /// Process method implemented to call the processors defined for this pipeline.
+        /// </summary>
+        /// <param name="data">Entity data input</param>
+        /// <param name="context">Execution context</param>
+        /// <param name="response">Reponse handle</param>
+        /// <returns>Response</returns>
         protected override ProcessResponse<T> ExecuteProcess(T data, Context context, ProcessResponse<T> response)
         {
             LogUtils.Debug("Running Process Pipeline:", data);
@@ -227,11 +272,24 @@ namespace LibGenesisCommon.Process
         }
     }
 
+    /// <summary>
+    /// Pipeline defined to operate on a collection of data.
+    /// </summary>
+    /// <typeparam name="T">Data Type</typeparam>
     public class CollectionPipeline<T> : CollectionProcessor<T>, Pipeline<List<T>>
     {
         protected List<Processor<List<T>>> processors = new List<Processor<List<T>>>();
         protected Dictionary<string, Func<T, bool>> conditions = new Dictionary<string, Func<T, bool>>();
 
+        /// <summary>
+        /// Add a new processor to this pipeline.
+        /// 
+        /// If a condition is specified, the passed data will be evaluated against it
+        /// to decide if the processor should operate on the data.
+        /// </summary>
+        /// <param name="processor">Processor handle.</param>
+        /// <param name="condition">Condition string (Linq Clause)</param>
+        /// <param name="prefix">Data Prefix used in the condition string. (Required)</param>
         public void Add(Processor<List<T>> processor, string condition, string prefix)
         {
             Contract.Requires(processor != null);
@@ -246,11 +304,22 @@ namespace LibGenesisCommon.Process
             }
         }
 
+        /// <summary>
+        /// Get all the defined processors for this pipeline.
+        /// </summary>
+        /// <returns>List of Processors</returns>
         public List<Processor<List<T>>> GetProcessors()
         {
             return processors;
         }
 
+        /// <summary>
+        /// Process method implemented to call the processors defined for this pipeline.
+        /// </summary>
+        /// <param name="data">Entity data input</param>
+        /// <param name="context">Execution context</param>
+        /// <param name="response">Reponse handle</param>
+        /// <returns>Response</returns>
         protected override ProcessResponse<List<T>> ExecuteProcess(List<T> data, Context context, ProcessResponse<List<T>> response)
         {
             LogUtils.Debug("Running Process Pipeline:", data);

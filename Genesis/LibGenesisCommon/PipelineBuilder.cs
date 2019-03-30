@@ -36,34 +36,72 @@ using LibZConfig.Common.Config.Nodes;
 
 namespace LibGenesisCommon.Process
 {
+    /// <summary>
+    /// Config class to auto-wire defined pipeline configurations.
+    /// </summary>
     [ConfigPath(Path = "pipeline")]
     public class PipelineConfig
     {
+        /// <summary>
+        /// Pipeline name - Must be unique for the builder context.
+        /// </summary>
         [ConfigAttribute(Name = "name", Required = true)]
         public string Name { get; set; }
+        /// <summary>
+        /// Pipeline class - Class extending Base/Collection pipeline. 
+        /// Note: Generics are not supported at this time.
+        /// </summary>
         [ConfigAttribute(Name = "type", Required = true)]
         public string Type { get; set; }
-        [ConfigAttribute(Name = "assembly", Required = false)]
+        /// <summary>
+        /// Assembly to load the pipeline type from.
+        /// </summary>
+        [ConfigAttribute(Name = "assembly", Required = true)]
         public string Assembly { get; set; }
     }
 
     [ConfigPath(Path = "processor")]
     public class ProcessConfig
     {
+        /// <summary>
+        /// Processor name - Must be unqiue in the context of a pipeline
+        /// </summary>
         [ConfigAttribute(Name = "name", Required = true)]
         public string Name { get; set; }
+        /// <summary>
+        /// Processor class - Class extending Base/Collection processor. 
+        /// Note: Generics are not supported at this time.
+        /// </summary>
         [ConfigAttribute(Name = "type", Required = true)]
         public string Type { get; set; }
-        [ConfigAttribute(Name = "assembly", Required = false)]
+        /// <summary>
+        /// Assembly to load the processor type from.
+        /// </summary>
+        [ConfigAttribute(Name = "assembly", Required = true)]
         public string Assembly { get; set; }
+        /// <summary>
+        /// Pipeline definition reference - If referring to an already defined
+        /// pipeline.
+        /// Pipelines can be embedded as processors in other pipelines.
+        /// </summary>
         [ConfigAttribute(Name = "reference", Required = false)]
         public bool IsReference { get; set; }
+        /// <summary>
+        /// Condition definition - Linq Clause used to decide if the current processor
+        /// should operate on the data.
+        /// </summary>
         [ConfigAttribute(Path = "condition", Name = "clause", Required = false)]
         public string Condition { get; set; }
+        /// <summary>
+        /// Entity prefix used in defining the condition. Required if condition is defined.
+        /// </summary>
         [ConfigAttribute(Path = "condition", Name = "typeName", Required = false)]
         public string TypeName { get; set; }
     }
 
+    /// <summary>
+    /// Builder class to load defined pipelines.
+    /// </summary>
     public class PipelineBuilder
     {
         public const string CONFIG_NODE_PIPELINES = "pipelines";
