@@ -42,6 +42,10 @@ Processors defined to operate on Collection of data elements.
 ## Configuration
 Pipeline/Processor definitions are loaded using XML configurations.
 
+ZConfig Configuration library is used to define the Pipeline configurations.
+
+https://github.com/subhagho/Zconfig.NET
+
 __Sample Configuration:__
 
 ```xml
