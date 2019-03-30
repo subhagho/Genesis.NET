@@ -2,6 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
+    <Version>0.1.0.001</Version>
+    <PackageId>Wookler.Genesis.Common</PackageId>
+    <Authors>Subho Ghosh</Authors>
+    <Company>Wookler</Company>
+    <Product>Genesis.NET</Product>
+    <Description>Auto-wired data pipelines
+
+- Auto-wired processors to operate on the data.</Description>
+    <Copyright>Subho Ghosh (subho&lt;dot&gt;ghosh&lt;at&gt;outlook.com</Copyright>
+    <PackageLicenseFile>license.txt</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/subhagho/Genesis.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/subhagho/Genesis.NET</RepositoryUrl>
+    <RepositoryType>github</RepositoryType>
+    <PackageTags>auto-wired data pipelines</PackageTags>
+    <NeutralLanguage>en</NeutralLanguage>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +33,13 @@
     <Reference Include="LibZConfigCommon">
       <HintPath>..\..\..\zconfig\DotNet\ZConfig.NET\LibZConfigCommon\bin\Debug\netcoreapp2.1\LibZConfigCommon.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="license.txt">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -104,15 +104,39 @@ namespace LibGenesisCommon.Process
     /// </summary>
     public class PipelineBuilder
     {
+        /// <summary>
+        /// Pipelines List definition tag
+        /// </summary>
         public const string CONFIG_NODE_PIPELINES = "pipelines";
+        /// <summary>
+        /// Pipeline definition tag
+        /// </summary>
         public const string CONFIG_NODE_PIPELINE = "pipeline";
+        /// <summary>
+        /// Processors List definition tag
+        /// </summary>
         public const string CONFIG_NODE_PROCESSORS = "processors";
+        /// <summary>
+        /// Processor definition tag
+        /// </summary>
         public const string CONFIG_NODE_PROCESSOR = "processor";
+        /// <summary>
+        /// Processor Property: Name
+        /// </summary>
         public const string PROPPERTY_NAME = "Name";
+        /// <summary>
+        /// Pipeline Method: Add
+        /// </summary>
         public const string METHOD_ADD = "Add";
 
         private Dictionary<string, object> pipelines = new Dictionary<string, object>();
 
+        /// <summary>
+        /// Get a defined pipeline by the specified name.
+        /// </summary>
+        /// <typeparam name="T">Data Type</typeparam>
+        /// <param name="name">Pipeline name</param>
+        /// <returns>Pipeline Instance</returns>
         public Pipeline<T> GetPipeline<T>(string name)
         {
             if (pipelines.ContainsKey(name))
@@ -129,6 +153,10 @@ namespace LibGenesisCommon.Process
             return null;
         }
 
+        /// <summary>
+        /// Load defined pipelines from the configuration.
+        /// </summary>
+        /// <param name="config">Configuration Node</param>
         public void Load(AbstractConfigNode config)
         {
             Contract.Requires(config != null);
@@ -169,6 +197,10 @@ namespace LibGenesisCommon.Process
             }
         }
 
+        /// <summary>
+        /// Load a pipeline definition from the specified node.
+        /// </summary>
+        /// <param name="node">Configuration Node</param>
         private void LoadPipeline(ConfigPathNode node)
         {
             LogUtils.Debug(String.Format("Loading pipeline from node. [node={0}]", node.GetAbsolutePath()));
@@ -213,6 +245,12 @@ namespace LibGenesisCommon.Process
             pipelines[def.Name] = obj;
         }
 
+        /// <summary>
+        /// Load the defined processes for the pipeline.
+        /// </summary>
+        /// <param name="pipeline">Parent pipeline</param>
+        /// <param name="node">Configuration node.</param>
+        /// <param name="name">Pipeline name</param>
         private void LoadProcessors(object pipeline, ConfigPathNode node, string name)
         {
             AbstractConfigNode pnode = node.Find(CONFIG_NODE_PROCESSORS);
@@ -234,6 +272,12 @@ namespace LibGenesisCommon.Process
             }
         }
 
+        /// <summary>
+        /// Load a defined process from the configuration node.
+        /// </summary>
+        /// <param name="pipeline">Parent pipeline</param>
+        /// <param name="node">Configuration node</param>
+        /// <param name="pname">Pipeline name</param>
         private void LoadProcessor(object pipeline, ConfigPathNode node, string pname)
         {
             LogUtils.Debug(String.Format("Loading processor from node. [pipeline={0}][node={1}]", pname, node.GetAbsolutePath()));
@@ -289,6 +333,13 @@ namespace LibGenesisCommon.Process
             AddProcessor(pipeline, obj, def.Condition, def.TypeName);
         }
 
+        /// <summary>
+        /// Add the processor instance to the pipeline.
+        /// </summary>
+        /// <param name="pipeline">Parent pipeline</param>
+        /// <param name="processor">Processor instance.</param>
+        /// <param name="condition">Condition (Linq Clause) if defined.</param>
+        /// <param name="prefix">Condition data prefix.</param>
         private void AddProcessor(object pipeline, object processor, string condition, string prefix)
         {
             MethodInfo mi = pipeline.GetType().GetMethod(METHOD_ADD);
