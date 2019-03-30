@@ -21,5 +21,11 @@ namespace LibGenesisCommon.Tests
         public string EmailId { get; set; }
         public bool IsAdult { get; set; }
         public Address Address { get; set; }
+
+        public User()
+        {
+            IsAdult = false;
+            DateOfBirth = DateTime.Now;
+        }
     }
 }

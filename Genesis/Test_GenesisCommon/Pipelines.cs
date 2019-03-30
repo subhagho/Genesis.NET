@@ -1,14 +1,14 @@
 ﻿using System;
 using LibZConfig.Common.Config.Attributes;
+using LibGenesisCommon.Common;
 using LibGenesisCommon.Process;
 
 namespace LibGenesisCommon.Tests
 {
     public class CheckNameProcessor : BasicProcessor<User>
     {
-        protected override ProcessResponse<User> ExecuteProcess(User data)
+        protected override ProcessResponse<User> ExecuteProcess(User data, Context context, ProcessResponse<User> response)
         {
-            ProcessResponse<User> response = new ProcessResponse<User>();
             if (String.IsNullOrWhiteSpace(data.LastName))
             {
                 response.Data = data;
@@ -28,14 +28,17 @@ namespace LibGenesisCommon.Tests
         [ConfigValue(Name = "domain", Required = false)]
         public string Domain { get; set; }
 
-        protected override ProcessResponse<User> ExecuteProcess(User data)
+        public DefaultEmailProcessor()
         {
-            ProcessResponse<User> response = new ProcessResponse<User>();
+            Domain = "test.org";
+        }
+
+        protected override ProcessResponse<User> ExecuteProcess(User data, Context context, ProcessResponse<User> response)
+        {
+            response.State = EProcessResponse.OK;
             if (String.IsNullOrWhiteSpace(data.EmailId))
             {
                 data.EmailId = String.Format("{0}.{1}@{2}", data.FirstName, data.LastName, Domain);
-                response.Data = data;
-                response.State = EProcessResponse.OK;
             }
             return response;
         }
@@ -46,15 +49,15 @@ namespace LibGenesisCommon.Tests
         [ConfigAttribute(Name = "adultAge", Required = true)]
         public int AdultAge { get; set; }
 
-        protected override ProcessResponse<User> ExecuteProcess(User data)
+        protected override ProcessResponse<User> ExecuteProcess(User data, Context context, ProcessResponse<User> response)
         {
-            ProcessResponse<User> response = new ProcessResponse<User>();
             if (data.DateOfBirth == null)
             {
                 response.Data = data;
-                response.SetError(EProcessResponse.FatalError, new ProcessException(String.Format("Invalid User: Missing {0}", nameof(data.DateOfBirth))));
+                response.Data.IsAdult = false;
+                response.SetError(EProcessResponse.ContinueWithError, new ProcessException(String.Format("Invalid User: Missing {0}", nameof(data.DateOfBirth))));
             }
-            if (String.IsNullOrWhiteSpace(data.EmailId))
+            else
             {
                 TimeSpan ts = DateTime.Now - data.DateOfBirth;
                 if (ts.TotalDays/365 > AdultAge)

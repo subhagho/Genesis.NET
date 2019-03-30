@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using LibZConfig.Common;
 using LibZConfig.Common.Utils;
 using LibZConfig.Common.Config.Attributes;
+using LibGenesisCommon.Common;
 
 namespace LibGenesisCommon.Process
 {
@@ -118,9 +119,10 @@ namespace LibGenesisCommon.Process
         /// Abstract method to execute the processor on the data element.
         /// </summary>
         /// <param name="data">Data element</param>
+        /// <param name="context">Execution context</param>
         /// <param name="condition">Condition clause to check prior to processing</param>
         /// <returns>Process response</returns>
-        public abstract ProcessResponse<T> Execute(T data, object condition);
+        public abstract ProcessResponse<T> Execute(T data, Context context, object condition);
     }
 
     /// <summary>
@@ -157,32 +159,43 @@ namespace LibGenesisCommon.Process
         /// Method to execute the processor on the data element.
         /// </summary>
         /// <param name="data">Data element</param>
+        /// <param name="context">Execution context</param>
         /// <param name="condition">Condition clause to check prior to processing</param>
         /// <returns>Process response</returns>
-        public override ProcessResponse<T> Execute(T data, object condition)
+        public override ProcessResponse<T> Execute(T data, Context context, object condition)
         {
-            if (data != null)
+            ProcessResponse<T> response = new ProcessResponse<T>();
+            response.Data = data;
+            response.State = EProcessResponse.None;
+            if (!ReflectionUtils.IsNull(data))
             {
                 if (!MatchCondition(data, condition))
                 {
-                    ProcessResponse<T> response = new ProcessResponse<T>();
                     response.State = EProcessResponse.NotExecuted;
                     response.Data = data;
+                    return response;
                 }
                 else
                 {
-                    return ExecuteProcess(data);
+                    return ExecuteProcess(data, context, response);
                 }
             }
-            return null;
+            else
+            {
+                response.Data = default(T);
+                response.State = EProcessResponse.NullData;
+            }
+            return response;
         }
 
         /// <summary>
         /// Execute the processor on the specified entity data.
         /// </summary>
         /// <param name="data">Entity data input</param>
+        /// <param name="context">Execution context</param>
+        /// <param name="response">Reponse handle</param>
         /// <returns>Response</returns>
-        protected abstract ProcessResponse<T> ExecuteProcess(T data);
+        protected abstract ProcessResponse<T> ExecuteProcess(T data, Context context, ProcessResponse<T> response);
     }
 
     public abstract class CollectionProcessor<T> : Processor<List<T>>
@@ -222,10 +235,14 @@ namespace LibGenesisCommon.Process
         /// Method to execute the processor on the data element.
         /// </summary>
         /// <param name="data">Data element</param>
+        /// <param name="context">Execution context</param>
         /// <param name="condition">Condition clause to check prior to processing</param>
         /// <returns>Process response</returns>
-        public override ProcessResponse<List<T>> Execute(List<T> data, object condition)
+        public override ProcessResponse<List<T>> Execute(List<T> data, Context context, object condition)
         {
+            ProcessResponse<List<T>> response = new ProcessResponse<List<T>>();
+            response.Data = data;
+            response.State = EProcessResponse.None;
             if (data != null && data.Count > 0)
             {
                 List<T> included = new List<T>();
@@ -243,7 +260,7 @@ namespace LibGenesisCommon.Process
                 }
                 if (included.Count > 0)
                 {
-                    ProcessResponse<List<T>> response = ExecuteProcess(data);
+                    response = ExecuteProcess(data, context, response);
                     Conditions.NotNull(response);
                     if (response.Data == null || response.Data.Count <= 0)
                     {
@@ -256,7 +273,7 @@ namespace LibGenesisCommon.Process
                         else
                         {
                             response.Data = excluded;
-                            response.State = EProcessResponse.NullData;
+                            response.State = EProcessResponse.OK;
                             return response;
                         }
                     }
@@ -281,7 +298,7 @@ namespace LibGenesisCommon.Process
                 }
                 else
                 {
-                    ProcessResponse<List<T>> response = new ProcessResponse<List<T>>();
+                    response = new ProcessResponse<List<T>>();
                     if (FilterResults)
                     {
                         response.Data = null;
@@ -291,20 +308,27 @@ namespace LibGenesisCommon.Process
                     else
                     {
                         response.Data = excluded;
-                        response.State = EProcessResponse.NullData;
+                        response.State = EProcessResponse.OK;
                         return response;
                     }
                 }
 
             }
-            return null;
+            else
+            {
+                response.Data = null;
+                response.State = EProcessResponse.NullData;
+            }
+            return response;
         }
 
         /// <summary>
         /// Execute the processor on the specified entity data.
         /// </summary>
         /// <param name="data">Entity data input</param>
+        /// <param name="context">Execution context</param>
+        /// <param name="response">Reponse handle</param>
         /// <returns>Response</returns>
-        protected abstract ProcessResponse<List<T>> ExecuteProcess(List<T> data);
+        protected abstract ProcessResponse<List<T>> ExecuteProcess(List<T> data, Context context, ProcessResponse<List<T>> response);
     }
 }

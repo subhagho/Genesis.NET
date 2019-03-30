@@ -135,11 +135,9 @@ namespace LibGenesisCommon.Process
             return processors;
         }
 
-        protected override ProcessResponse<T> ExecuteProcess(T data)
+        protected override ProcessResponse<T> ExecuteProcess(T data, Context context, ProcessResponse<T> response)
         {
             LogUtils.Debug("Running Process Pipeline:", data);
-            ProcessResponse<T> response = new ProcessResponse<T>();
-            response.Data = data;
             if (processors.Count > 0)
             {
                 try
@@ -151,7 +149,7 @@ namespace LibGenesisCommon.Process
                         {
                             func = conditions[processor.Name];
                         }
-                        response = processor.Execute(response.Data, func);
+                        response = processor.Execute(response.Data, context, func);
                         Conditions.NotNull(response);
                         if (response.Data == null)
                         {
@@ -211,6 +209,20 @@ namespace LibGenesisCommon.Process
                     }
                 }
             }
+            if (ReflectionUtils.IsNull(data))
+            {
+                if (response.State != EProcessResponse.FatalError)
+                {
+                    response.State = EProcessResponse.NullData;
+                }
+            }
+            else
+            {
+                if (response.State != EProcessResponse.FatalError)
+                {
+                    response.State = EProcessResponse.OK;
+                }
+            }
             return response;
         }
     }
@@ -239,11 +251,9 @@ namespace LibGenesisCommon.Process
             return processors;
         }
 
-        protected override ProcessResponse<List<T>> ExecuteProcess(List<T> data)
+        protected override ProcessResponse<List<T>> ExecuteProcess(List<T> data, Context context, ProcessResponse<List<T>> response)
         {
             LogUtils.Debug("Running Process Pipeline:", data);
-            ProcessResponse<List<T>> response = new ProcessResponse<List<T>>();
-            response.Data = data;
             if (processors.Count > 0)
             {
                 try
@@ -255,7 +265,7 @@ namespace LibGenesisCommon.Process
                         {
                             func = conditions[processor.Name];
                         }
-                        response = processor.Execute(response.Data, func);
+                        response = processor.Execute(response.Data, context, func);
                         Conditions.NotNull(response);
                         if (response.Data == null || response.Data.Count <= 0)
                         {
@@ -313,6 +323,20 @@ namespace LibGenesisCommon.Process
                     {
                         response.State = EProcessResponse.UnhandledError;
                     }
+                }
+            }
+            if (ReflectionUtils.IsNull(data))
+            {
+                if (response.State != EProcessResponse.FatalError)
+                {
+                    response.State = EProcessResponse.NullData;
+                }
+            }
+            else
+            {
+                if (response.State != EProcessResponse.FatalError)
+                {
+                    response.State = EProcessResponse.OK;
                 }
             }
             return response;

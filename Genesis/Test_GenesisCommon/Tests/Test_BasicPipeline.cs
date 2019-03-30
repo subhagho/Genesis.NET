@@ -70,7 +70,50 @@ namespace LibGenesisCommon.Tests
 
                 PipelineBuilder builder = new PipelineBuilder();
                 builder.Load(config.RootConfigNode);
-                
+
+                Pipeline<User> pipeline = builder.GetPipeline<User>("UserDataPipeline");
+                Assert.NotNull(pipeline);
+                LogUtils.Debug("UserDataPipeline>>", pipeline);
+                pipeline = builder.GetPipeline<User>("UserDataPipelineRef");
+                Assert.NotNull(pipeline);
+                LogUtils.Debug("UserDataPipelineRef>>", pipeline);
+            }
+            catch (Exception ex)
+            {
+                LogUtils.Error(ex);
+                throw ex;
+            }
+        }
+
+        [Fact]
+        public void RunPipeline()
+        {
+            try
+            {
+                Configuration config = GetConfiguration();
+                Assert.NotNull(config);
+
+                PipelineBuilder builder = new PipelineBuilder();
+                builder.Load(config.RootConfigNode);
+
+                BasicPipeline<User> pipeline = (BasicPipeline<User>)builder.GetPipeline<User>("UserDataPipeline");
+                Assert.NotNull(pipeline);
+                LogUtils.Debug("UserDataPipeline>>", pipeline);
+                User user = new User();
+                ProcessResponse<User> response = pipeline.Execute(user, null, null);
+                Assert.Equal(EProcessResponse.FatalError, response.State);
+
+                user.LastName = "TestUser";
+                response = pipeline.Execute(user, null, null);
+                Assert.Equal(EProcessResponse.OK, response.State);
+                Assert.False(String.IsNullOrWhiteSpace(user.EmailId));
+                Assert.False(user.IsAdult);
+
+                user.FirstName = "First";
+                user.DateOfBirth = DateTime.Parse("07/21/1953");
+                response = pipeline.Execute(user, null, null);
+                Assert.Equal(EProcessResponse.OK, response.State);
+                Assert.True(user.IsAdult);
             }
             catch (Exception ex)
             {

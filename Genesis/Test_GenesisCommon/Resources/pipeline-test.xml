@@ -11,8 +11,13 @@
         <processor name="CheckNameProcessor" type="LibGenesisCommon.Tests.CheckNameProcessor" assembly="Test_GenesisCommon.dll"/>
         <processor name="DefaultEmailProcessor" type="LibGenesisCommon.Tests.DefaultEmailProcessor" assembly="Test_GenesisCommon.dll"/>
         <processor name="AgeValidator" type="LibGenesisCommon.Tests.AgeValidator" assembly="Test_GenesisCommon.dll" adultAge="18">
-          <condition clause="user.DateOfBirth != null" typeName="user"/>
+          <condition clause="user.FirstName != null" typeName="user"/>
         </processor>
+      </processors>
+    </pipeline>
+    <pipeline name="UserDataPipelineRef" type="LibGenesisCommon.Tests.UserDataPipeline" assembly="Test_GenesisCommon.dll">
+      <processors>
+        <processor name="process" reference="UserDataPipeline"/>
       </processors>
     </pipeline>
   </pipelines>
