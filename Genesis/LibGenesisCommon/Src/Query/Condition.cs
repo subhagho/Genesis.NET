@@ -42,14 +42,20 @@ namespace LibGenesisCommon.Query
 
     public abstract class Condition<T>
     {
+        protected bool closed = false;
+
+        public virtual bool IsClosed()
+        {
+            return closed;
+        }
+
         public abstract void Validate();
     }
 
     public class ConditionGroup<T> : Condition<T>
     {
         private List<Condition<T>> conditions = new List<Condition<T>>();
-        private bool closed = false;
-
+        
         public List<Condition<T>> Conditions
         {
             get { return conditions; }
@@ -67,11 +73,6 @@ namespace LibGenesisCommon.Query
         {
             closed = true;
             return this;
-        }
-
-        public bool IsClosed()
-        {
-            return closed;
         }
 
         public override void Validate()
@@ -104,8 +105,6 @@ namespace LibGenesisCommon.Query
         {
             get { return _right; }
         }
-
-        private bool closed = false;
 
         public AndCondition<T> Add(Condition<T> condition)
         {
@@ -151,8 +150,6 @@ namespace LibGenesisCommon.Query
         {
             get { return _right; }
         }
-
-        private bool closed = false;
 
         public OrCondition<T> Add(Condition<T> condition)
         {
@@ -338,6 +335,8 @@ namespace LibGenesisCommon.Query
                 throw new QueryException("Right Clause Element missing.");
             }
         }
+
+
     }
 
     public class BasicCondition<T> : BaseCondition<T>
@@ -357,12 +356,27 @@ namespace LibGenesisCommon.Query
                 throw new QueryException("Clause operator not set.");
             }
         }
+
+        public override bool IsClosed()
+        {
+            if (closed)
+            {
+                return true;
+            }
+            else
+            {
+                if (LeftElement != null && RightElement != null)
+                {
+
+                }
+            }
+            return closed;
+        }
     }
 
     public class ListCondition<T> : BaseCondition<T>
     {
-        private bool closed = false;
-
+        
         public EListOperator Operator { get; set; }
 
         public ListCondition()
@@ -376,17 +390,10 @@ namespace LibGenesisCommon.Query
             closed = true;
         }
 
-        public bool IsClosed()
-        {
-            return closed;
-        }
-
-        public void AddValue(object value)
+        public void AddValue(ClauseValue value)
         {
             Contract.Requires(value != null);
-            ClauseValue cv = new ClauseValue();
-            cv.Value = value;
-
+            
             if (RightElement == null)
             {
                 RightElement = new ClauseListElement();
@@ -396,7 +403,7 @@ namespace LibGenesisCommon.Query
             {
                 elem.Values = new List<ClauseValue>();
             }
-            elem.Values.Add(cv);
+            elem.Values.Add(value);
         }
 
         public override void Validate()

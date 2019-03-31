@@ -40,156 +40,321 @@ namespace LibGenesisCommon.Query
         }
     }
 
+    public class ConditionBuilder<T>
+    {
+        private ConditionGroup<T> root = null;
+        private Stack<Condition<T>> stack = new Stack<Condition<T>>();
+
+        public Condition<T> GetCondition()
+        {
+            return root;
+        }
+
+        private void CheckRoot()
+        {
+            if (root == null)
+            {
+                root = new ConditionGroup<T>();
+            }
+            stack.Push(root);
+        }
+
+        public Condition<T> Group()
+        {
+            CheckRoot();
+            ConditionGroup<T> group = new ConditionGroup<T>();
+            AddCondition(group);
+            return group;
+        }
+
+        public Condition<T> RangeCondition(string field, EListOperator oper)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(field));
+            Contract.Requires(oper == EListOperator.InRange || oper == EListOperator.NotInRange);
+            CheckRoot();
+
+            ListCondition<T> condition = new ListCondition<T>();
+            ClauseVariable var = new ClauseVariable();
+            var.Name = field;
+            condition.LeftElement = var;
+            condition.Operator = oper;
+
+            AddCondition(condition);
+
+            return condition;
+        }
+
+        public Condition<T> InCondition(string field, EListOperator oper)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(field));
+            Contract.Requires(oper == EListOperator.In || oper == EListOperator.NotIn);
+            CheckRoot();
+
+            ListCondition<T> condition = new ListCondition<T>();
+            ClauseVariable var = new ClauseVariable();
+            var.Name = field;
+            condition.LeftElement = var;
+            condition.Operator = oper;
+
+            AddCondition(condition);
+
+            return condition;
+        }
+
+        public Condition<T> And()
+        {
+            CheckRoot();
+            AndCondition<T> and = new AndCondition<T>();
+            AddCondition(and);
+            return and;
+        }
+
+        public Condition<T> Or()
+        {
+            CheckRoot();
+            OrCondition<T> or = new OrCondition<T>();
+            AddCondition(or);
+            return or;
+        }
+
+        public Condition<T> Compare(string field, EBasicOperator oper, string value)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(field));
+            Contract.Requires(oper != EBasicOperator.None);
+            CheckRoot();
+
+            BasicCondition<T> condition = new BasicCondition<T>();
+
+            ClauseVariable var = new ClauseVariable();
+            var.Name = field;
+            condition.LeftElement = var;
+
+            condition.Operator = oper;
+
+            ClauseValue val = new ClauseValue();
+            val.Value = value;
+            condition.RightElement = val;
+
+            AddCondition(condition);
+            return condition;
+        }
+
+        public Condition<T> Compare(string field, EBasicOperator oper)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(field));
+            Contract.Requires(oper != EBasicOperator.None);
+            CheckRoot();
+
+            BasicCondition<T> condition = new BasicCondition<T>();
+
+            ClauseVariable var = new ClauseVariable();
+            var.Name = field;
+            condition.LeftElement = var;
+
+            condition.Operator = oper;
+
+            AddCondition(condition);
+            return condition;
+        }
+
+        public Condition<T> Value(string value)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(value));
+            ClauseValue val = new ClauseValue();
+            val.Value = value;
+
+            return AddClause(val);
+        }
+
+        public Condition<T> FieldOperation(string field, EMathOperator oper, string value)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(field));
+            Contract.Requires(oper != EMathOperator.None);
+            Contract.Requires(!String.IsNullOrWhiteSpace(value));
+
+            ClauseOperationElement elem = new ClauseOperationElement();
+
+            ClauseVariable var = new ClauseVariable();
+            var.Name = field;
+            elem.LeftElement = var;
+
+            elem.Operator = oper;
+
+            ClauseValue val = new ClauseValue();
+            val.Value = value;
+
+            return AddClause(elem);
+        }
+
+        public Condition<T> FieldOperation(string field, EMathOperator oper)
+        {
+            Contract.Requires(!String.IsNullOrWhiteSpace(field));
+            Contract.Requires(oper != EMathOperator.None);
+
+            ClauseOperationElement elem = new ClauseOperationElement();
+
+            ClauseVariable var = new ClauseVariable();
+            var.Name = field;
+            elem.LeftElement = var;
+
+            elem.Operator = oper;
+
+            return AddClause(elem);
+        }
+
+        public Condition<T> Operation(ClauseElement clause)
+        {
+            Contract.Requires(clause != null);
+
+            return AddClause(clause);
+        }
+
+        public Condition<T> Close()
+        {
+            Condition<T> condition = stack.Pop();
+            if (condition.GetType() == typeof(ConditionGroup<T>))
+            {
+                ConditionGroup<T> group = (ConditionGroup<T>)condition;
+                group.Validate();
+                group.Close();
+            }
+            else if (condition.GetType() == typeof(ListCondition<T>))
+            {
+                ListCondition<T> list = (ListCondition<T>)condition;
+                list.Validate();
+                list.Close();
+            }
+            else
+            {
+                if (!condition.IsClosed())
+                    throw new QueryException(String.Format("Invalid Stack State: Condition is not closed. [type={0}]", condition.GetType().FullName));
+            }
+            return condition;
+        }
+
+        private void AddCondition(Condition<T> condition)
+        {
+            Condition<T> parent = stack.Peek();
+            if (parent.GetType() == typeof(ConditionGroup<T>))
+            {
+                ConditionGroup<T> group = (ConditionGroup<T>)parent;
+                if (group.IsClosed())
+                {
+                    throw new QueryException(String.Format("Invalid Stack State: Group condition is already closed. [type={0}]", group.GetType().FullName));
+                }
+                group.Add(condition);
+            }
+            else if (parent.GetType() == typeof(AndCondition<T>))
+            {
+                AndCondition<T> and = (AndCondition<T>)parent;
+                if (and.IsClosed())
+                {
+                    throw new QueryException(String.Format("Invalid Stack State: And condition is already closed. [type={0}]", and.GetType().FullName));
+                }
+                and.Add(condition);
+            }
+            else if (parent.GetType() == typeof(AndCondition<T>))
+            {
+                AndCondition<T> and = (AndCondition<T>)parent;
+                if (and.IsClosed())
+                {
+                    throw new QueryException(String.Format("Invalid Stack State: And condition is already closed. [type={0}]", and.GetType().FullName));
+                }
+                and.Add(condition);
+            }
+            else if (parent.GetType() == typeof(OrCondition<T>))
+            {
+                OrCondition<T> or = (OrCondition<T>)parent;
+                if (or.IsClosed())
+                {
+                    throw new QueryException(String.Format("Invalid Stack State: Or condition is already closed. [type={0}]", or.GetType().FullName));
+                }
+                or.Add(condition);
+            }
+            stack.Push(condition);
+        }
+
+        private Condition<T> AddClause(ClauseElement clause)
+        {
+            Condition<T> parent = stack.Peek();
+            if (parent.GetType() == typeof(ListCondition<T>))
+            {
+                ListCondition<T> list = (ListCondition<T>)parent;
+                if (list.IsClosed())
+                {
+                    throw new QueryException(String.Format("Invalid Stack State: List condition is already closed. [type={0}]", list.GetType().FullName));
+                }
+                if (clause.GetType() != typeof(ClauseValue))
+                {
+                    throw new QueryException(String.Format("Invalid Clause: Expected Value clause. [type={0}]", clause.GetType().FullName));
+                }
+                list.AddValue((ClauseValue)clause);
+
+                return list;
+            }
+            else if (parent.GetType() == typeof(BasicCondition<T>))
+            {
+                BasicCondition<T> condition = (BasicCondition<T>)parent;
+                if (condition.IsClosed())
+                {
+                    throw new QueryException(String.Format("Invalid Stack State: List condition is already closed. [type={0}]", condition.GetType().FullName));
+                }
+                if (condition.LeftElement == null)
+                {
+                    condition.LeftElement = clause;
+                }
+                else
+                {
+                    condition.RightElement = clause;
+                }
+                return condition;
+            }
+            throw new QueryException(String.Format("Invalid Stack State: Cannot add clause. [type={0}]", parent.GetType().FullName));
+        }
+    }
     public class Parser<T>
     {
         public Condition<T> Parse(List<Token> tokens)
         {
             Contract.Requires(tokens != null && tokens.Count > 0);
-            Stack<Condition<T>> stack = new Stack<Condition<T>>();
-            ConditionGroup<T> root = new ConditionGroup<T>();
-            stack.Push(root);
+            ConditionBuilder<T> builder = new ConditionBuilder<T>();
 
-            Token prev = null;
-            foreach(Token token in tokens)
+            for (int index = 0; index < tokens.Count; index++)
             {
-                ProcessToken(prev, token, stack);
-                prev = token;
+                int delta = ProcessToken(index, tokens, builder);
+                if (delta > 0)
+                {
+                    index += (delta - 1);
+                }
             }
 
-            Condition<T> c = stack.Pop();
-            if (!c.Equals(root))
-            {
-                throw new ParserException("Invalid Stack State: Expected root condition on stack.");
-            }
-            root.Close();
-
-            return root;
+            return builder.GetCondition();
         }
 
-        private void ProcessToken(Token prev, Token token, Stack<Condition<T>> stack)
+        private int ProcessToken(int index, List<Token> tokens, ConditionBuilder<T> builder)
         {
+            Token token = tokens[index];
             if (token.GetType() == typeof(GroupToken))
             {
-                ProcessGroupToken(prev, (GroupToken)token, stack);
-            }
-            else if (token.GetType() == typeof(OperatorToken))
-            {
-                if (token.Value == TokenConstants.CONST_AND)
+                GroupToken group = (GroupToken)token;
+                if (group.Value == TokenConstants.CONST_GROUP_START)
                 {
-                    AndCondition<T> condition = new AndCondition<T>();
-                    AddCondition(condition, stack);
+                    builder.Group();
                 }
-                else if (token.Value == TokenConstants.CONST_OR)
+                else if (group.Value == TokenConstants.CONST_GROUP_START)
                 {
-                    OrCondition<T> condition = new OrCondition<T>();
-                    AddCondition(condition, stack);
+                    builder.Close();
                 }
-            }
-            else if (token.GetType() == typeof(StringToken) || token.GetType() == typeof(StringToken))
-            {
-                if (token.Value == TokenConstants.CONST_NULL)
+                else if (group.Value == TokenConstants.CONST_RANGE_START)
                 {
-                    NullClauseValue nv = new NullClauseValue();
-                    nv.Value = token.Value;
-                    AddClause(nv, stack);
+                    builder.Group();
                 }
-                else
+                else if (group.Value == TokenConstants.CONST_LIST_START)
                 {
-                    ClauseValue cv = new ClauseValue();
-                    cv.Value = token.Value;
-                    AddClause(cv, stack);
+                    builder.Close();
                 }
             }
-        }
-
-        private void ProcessGroupToken(Token prev, GroupToken token, Stack<Condition<T>> stack)
-        {
-            if (token.Value == TokenConstants.CONST_GROUP_START)
-            {
-                ConditionGroup<T> group = new ConditionGroup<T>();
-                AddCondition(group, stack);
-            }
-            else if (token.Value == TokenConstants.CONST_GROUP_END)
-            {
-                Condition<T> condition = stack.Pop();
-                if (condition.GetType() != typeof(ConditionGroup<T>))
-                {
-                    throw new ParserException("Invalid Stack State: Expected group condition on stack.");
-                }
-                ConditionGroup<T> group = (ConditionGroup<T>)condition;
-                group.Close();
-            }
-            else if (token.Value == TokenConstants.CONST_RANGE_START)
-            {
-                ListCondition<T> condition = new ListCondition<T>();
-                if (prev.Value == TokenConstants.CONST_EQUALS)
-                {
-                    condition.Operator = EListOperator.InRange;
-                }
-                else if (prev.Value == TokenConstants.CONST_NOT_EQUALS)
-                {
-                    condition.Operator = EListOperator.NotInRange;
-                }
-                else
-                {
-                    throw new ParserException(String.Format("Invalid Range Token : Operator is invalid. [operator={0}]", prev.Value));
-                }
-                AddCondition(condition, stack);
-            }
-            else if (token.Value == TokenConstants.CONST_GROUP_END)
-            {
-                Condition<T> condition = stack.Pop();
-                if (condition.GetType() != typeof(ListCondition<T>))
-                {
-                    throw new ParserException("Invalid Stack State: Expected group condition on stack.");
-                }
-                ListCondition<T> list = (ListCondition<T>)condition;
-                list.Close();
-            }
-            else if (token.Value == TokenConstants.CONST_LIST_START)
-            {
-                ListCondition<T> condition = new ListCondition<T>();
-                if (prev.Value == TokenConstants.CONST_EQUALS)
-                {
-                    condition.Operator = EListOperator.In;
-                }
-                else if (prev.Value == TokenConstants.CONST_NOT_EQUALS)
-                {
-                    condition.Operator = EListOperator.NotIn;
-                }
-                else
-                {
-                    throw new ParserException(String.Format("Invalid Range Token : Operator is invalid. [operator={0}]", prev.Value));
-                }
-                AddCondition(condition, stack);
-            }
-            else if (token.Value == TokenConstants.CONST_LIST_END)
-            {
-                Condition<T> condition = stack.Pop();
-                if (condition.GetType() != typeof(ListCondition<T>))
-                {
-                    throw new ParserException("Invalid Stack State: Expected group condition on stack.");
-                }
-                ListCondition<T> list = (ListCondition<T>)condition;
-                list.Close();
-            }
-            else
-            {
-                throw new ParserException(String.Format("Invalid Group Token: [{0}]", token.Value));
-            }
-        }
-
-        private void AddCondition(Condition<T> condition, Stack<Condition<T>> stack, bool putOnStack = true)
-        {
-            if (putOnStack)
-            {
-                stack.Push(condition);
-            }
-        }
-
-        private void AddClause(ClauseElement clause, Stack<Condition<T>> stack)
-        {
-
+            return 0;
         }
     }
 }
