@@ -59,6 +59,14 @@ namespace LibGenesisCommon.Query
             stack.Push(root);
         }
 
+        public Condition<T> Peek()
+        {
+            if (stack != null && stack.Count > 0)
+                return stack.Peek();
+
+            return null;
+        }
+
         public Condition<T> Group()
         {
             CheckRoot();
@@ -334,24 +342,15 @@ namespace LibGenesisCommon.Query
         private int ProcessToken(int index, List<Token> tokens, ConditionBuilder<T> builder)
         {
             Token token = tokens[index];
-            if (token.GetType() == typeof(GroupToken))
+            if (TokenConstants.IsJoinOperator(token))
             {
-                GroupToken group = (GroupToken)token;
-                if (group.Value == TokenConstants.CONST_GROUP_START)
+                if (token.Value == TokenConstants.CONST_AND)
                 {
-                    builder.Group();
+                    builder.And();
                 }
-                else if (group.Value == TokenConstants.CONST_GROUP_START)
+                else if (token.Value == TokenConstants.CONST_OR)
                 {
-                    builder.Close();
-                }
-                else if (group.Value == TokenConstants.CONST_RANGE_START)
-                {
-                    builder.Group();
-                }
-                else if (group.Value == TokenConstants.CONST_LIST_START)
-                {
-                    builder.Close();
+                    builder.Or();
                 }
             }
             return 0;

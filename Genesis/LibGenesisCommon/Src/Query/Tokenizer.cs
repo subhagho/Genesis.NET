@@ -224,7 +224,91 @@ namespace LibGenesisCommon.Query
 
         private static OperatorToken OperatorToken(string token, int index)
         {
-            OperatorToken t = new OperatorToken();
+            OperatorToken t = null;
+            if (token.StartsWith(CONST_AND))
+            {
+                t = new OperatorToken();
+            }
+            else if (token.StartsWith(CONST_OR))
+            {
+                t = new OperatorToken();
+            }
+            else if (token.StartsWith(CONST_BIT_LEFT))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_RIGHT))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_NOT_EQUALS))
+            {
+                t = new ConditionToken();
+            }
+            else if (token.StartsWith(CONST_GREATER_EQUALS))
+            {
+                t = new ConditionToken();
+            }
+            else if (token.StartsWith(CONST_LESS_EQUALS))
+            {
+                t = new ConditionToken();
+            }
+            else if (token.StartsWith(CONST_EQUALS))
+            {
+                t = new ConditionToken();
+            }
+            else if (token.StartsWith(CONST_GREATER))
+            {
+                t = new ConditionToken();
+            }
+            else if (token.StartsWith(CONST_LESS))
+            {
+                t = new ConditionToken();
+            }
+            else if (token.StartsWith(CONST_PLUS))
+            {
+                t = new MathOperator();
+            }
+            else if (token.StartsWith(CONST_MINUS))
+            {
+                t = new MathOperator();
+            }
+            else if (token.StartsWith(CONST_MULT))
+            {
+                t = new MathOperator();
+            }
+            else if (token.StartsWith(CONST_DIVD))
+            {
+                t = new MathOperator();
+            }
+            else if (token.StartsWith(CONST_MOD))
+            {
+                t = new MathOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_AND))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_LEFT))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_NOT))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_OR))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_RIGHT))
+            {
+                t = new BitOperator();
+            }
+            else if (token.StartsWith(CONST_BIT_XOR))
+            {
+                t = new BitOperator();
+            }
             t.Value = token;
             t.Index = index;
             t.Length = token.Length;
@@ -240,6 +324,53 @@ namespace LibGenesisCommon.Query
             t.Length = token.Length;
 
             return t;
+        }
+
+        public static bool IsGroup(Token token)
+        {
+            if (token.GetType() == typeof(GroupToken))
+            {
+                if (token.Value == CONST_GROUP_START || token.Value == CONST_GROUP_END)
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool IsJoinOperator(Token token)
+        {
+            if (token.GetType() == typeof(OperatorToken))
+            {
+                if (token.Value == CONST_AND || token.Value == CONST_OR)
+                    return true;
+            }
+            return false;
+        }
+
+        public static bool IsComparator(Token token)
+        {
+            if (token.GetType() == typeof(ConditionToken))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static bool IsMathOperator(Token token)
+        {
+            if (token.GetType() == typeof(MathOperator))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public static bool IsBitOperator(Token token)
+        {
+            if (token.GetType() == typeof(BitOperator))
+            {
+                return true;
+            }
+            return false;
         }
     }
 
@@ -268,6 +399,21 @@ namespace LibGenesisCommon.Query
     }
 
     public class OperatorToken : Token
+    {
+
+    }
+
+    public class ConditionToken : OperatorToken
+    {
+
+    }
+
+    public class MathOperator : OperatorToken
+    {
+
+    }
+
+    public class BitOperator : MathOperator
     {
 
     }

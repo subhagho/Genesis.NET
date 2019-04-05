@@ -286,13 +286,44 @@ namespace LibGenesisCommon.Query
 
     public class ClauseListElement : ClauseElement
     {
-        public List<ClauseValue> Values { get; set; }
+        public List<ClauseValue> Values { get; }
+
+        public ClauseListElement()
+        {
+            Values = new List<ClauseValue>();
+        }
+
+        public ClauseListElement Add(ClauseValue value)
+        {
+            Contract.Requires(value != null);
+            Values.Add(value);
+
+            return this;
+        }
 
         public override void Validate()
         {
             if (Values == null || Values.Count <= 0)
             {
                 throw new QueryException(String.Format("Missing Property : {0}", nameof(Values)));
+            }
+        }
+    }
+
+    public class ClauseGroup : ClauseElement
+    {
+        public List<ClauseElement> Elements { get; }
+
+        public ClauseGroup()
+        {
+            Elements = new List<ClauseElement>();
+        }
+
+        public override void Validate()
+        {
+            if (Elements == null || Elements.Count <= 0)
+            {
+                throw new QueryException(String.Format("Missing Property : {0}", nameof(Elements)));
             }
         }
     }
@@ -399,10 +430,6 @@ namespace LibGenesisCommon.Query
                 RightElement = new ClauseListElement();
             }
             ClauseListElement elem = (ClauseListElement)RightElement;
-            if (elem.Values == null)
-            {
-                elem.Values = new List<ClauseValue>();
-            }
             elem.Values.Add(value);
         }
 
